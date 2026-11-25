@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vole Machine Simulator - CS213</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        header h1 { font-size: 1.5rem; color: var(--accent); }
+        header p { color: var(--muted); font-size: 0.9rem; }
+        .grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #e2e8f0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        textarea { width: 100%; height: 180px; background: #0b1120; color: #38bdf8; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 1rem; resize: vertical; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+        button { padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; color: white; }
+        .btn-primary { background: var(--accent); }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #000; }
+        .btn-danger { background: var(--danger); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); font-size: 0.85rem; padding: 6px; }
+        .btn-outline:hover { background: var(--border); }
+        .status-bar { display: flex; gap: 20px; background: #0b1120; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px; font-family: monospace; font-size: 1rem; }
+        .status-item span { color: var(--muted); }
+        .status-item strong { color: var(--warning); }
+        .screen-box { background: #000; color: #22c55e; font-family: monospace; padding: 12px; border-radius: 6px; border: 1px solid #14532d; min-height: 45px; font-size: 1.1rem; margin-bottom: 15px; }
+        .reg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .reg-cell { background: #0b1120; border: 1px solid var(--border); padding: 8px; border-radius: 4px; display: flex; justify-content: space-between; font-family: monospace; }
+        .reg-cell.active { border-color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+        .mem-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; max-height: 360px; overflow-y: auto; }
+        .mem-cell { background: #0b1120; border: 1px solid var(--border); padding: 4px 2px; text-align: center; font-family: monospace; font-size: 0.8rem; border-radius: 3px; }
+        .mem-cell .addr { display: block; font-size: 0.65rem; color: var(--muted); }
+        .mem-cell.pc-highlight { border-color: var(--accent); background: rgba(59, 130, 246, 0.25); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>Vole Machine Architecture Simulator</h1>
+            <p>CS213 - Object-Oriented Programming | Student: Mohamed Sayed (20250565)</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn-outline" onclick="loadPreset('add')">Load Add Example (5+3)</button>
+            <button class="btn-outline" onclick="loadPreset('mul')">Load Multiply Example (4x3)</button>
+        </div>
+    </header>
+
+    <div class="grid">
+        <div>
+            <div class="card">
+                <h2>Program Instructions (Hex)</h2>
+                <textarea id="codeInput" placeholder="Enter 4-digit hex instructions..."></textarea>
+                <div class="btn-group">
+                    <button class="btn-primary" onclick="loadProgram()">Load to Memory</button>
+                    <button class="btn-danger" onclick="resetMachine()">Reset All</button>
+                    <button class="btn-warning" onclick="stepExecution()">Step (Fetch/Exec)</button>
+                    <button class="btn-success" onclick="runAll()">Run Complete</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Quick Op-Code Reference</h2>
+                <ul style="font-size: 0.85rem; color: var(--muted); line-height: 1.6; padding-left: 16px;">
+                    <li><strong>1RXY:</strong> Load Reg R from Mem XY</li>
+                    <li><strong>2RXY:</strong> Load Reg R with value XY</li>
+                    <li><strong>3RXY:</strong> Store Reg R to Mem XY (00=Screen)</li>
+                    <li><strong>40RS:</strong> Move Reg R to Reg S</li>
+                    <li><strong>5RST:</strong> Add Reg S + Reg T into Reg R</li>
+                    <li><strong>BRXY:</strong> Jump to XY if Reg R == Reg 0</li>
+                    <li><strong>C000:</strong> Halt execution</li>
+                </ul>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h2>CPU State & Screen Output</h2>
+                <div class="status-bar">
+                    <div class="status-item"><span>PC:</span> <strong id="pcVal">00</strong></div>
+                    <div class="status-item"><span>IR:</span> <strong id="irVal">0000</strong></div>
+                    <div class="status-item"><span>Status:</span> <strong id="statusVal">READY</strong></div>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 4px;">Console Screen Output (Memory 0x00):</div>
+                <div class="screen-box" id="screenOut">_</div>
+
+                <h2 style="margin-top: 15px;">CPU Registers (R0 - RF)</h2>
+                <div class="reg-grid" id="regGrid"></div>
+            </div>
+
+            <div class="card">
+                <h2>Main Memory (256 Bytes: 0x00 - 0xFF)</h2>
+                <div class="mem-grid" id="memGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let memory = new Array(256).fill("00");
+    let registers = new Array(16).fill("00");
+    let pc = 0;
+    let ir = "0000";
+    let halted = false;
+    let screen = "";
+    let lastModifiedReg = -1;
+
+    function toHex(num, pad = 2) {
+        return (num & (pad === 2 ? 0xFF : 0xFFFF)).toString(16).toUpperCase().padStart(pad, '0');
+    }
+
+    function renderUI() {
+        document.getElementById('pcVal').innerText = toHex(pc);
+        document.getElementById('irVal').innerText = ir;
+        document.getElementById('statusVal').innerText = halted ? "HALTED" : "RUNNING";
+        document.getElementById('screenOut').innerText = screen || "_";
+
+        const regGrid = document.getElementById('regGrid');
+        regGrid.innerHTML = "";
+        for (let i = 0; i < 16; i++) {
+            const div = document.createElement('div');
+            div.className = 'reg-cell' + (i === lastModifiedReg ? ' active' : '');
+            div.innerHTML = `<span style="color:#94a3b8">R${i.toString(16).toUpperCase()}</span><strong>${registers[i]}</strong>`;
+            regGrid.appendChild(div);
+        }
+
+        const memGrid = document.getElementById('memGrid');
+        memGrid.innerHTML = "";
+        for (let i = 0; i < 256; i++) {
+            const div = document.createElement('div');
+            div.className = 'mem-cell' + ((i === pc || i === pc + 1) && !halted ? ' pc-highlight' : '');
+            div.innerHTML = `<span class="addr">${toHex(i)}</span>${memory[i]}`;
+            memGrid.appendChild(div);
+        }
+    }
+
+    function loadPreset(type) {
+        if (type === 'add') {
+            document.getElementById('codeInput').value = "2105\n2203\n5312\n3300\nC000";
+        } else {
+            document.getElementById('codeInput').value = "2000\n2103\n2204\n2301\n2400\nB114\n5442\n5003\nB00A\n3400\nC000";
+        }
+        loadProgram();
+    }
+
+    function resetMachine() {
+        memory.fill("00");
+        registers.fill("00");
+        pc = 0;
+        ir = "0000";
+        halted = false;
+        screen = "";
+        lastModifiedReg = -1;
+        renderUI();
+    }
+
+    function loadProgram() {
+        resetMachine();
+        const lines = document.getElementById('codeInput').value.trim().split(/\s+/);
+        let addr = 0;
+        for (let line of lines) {
+            if (/^[0-9A-Fa-f]{4}$/.test(line) && addr < 255) {
+                memory[addr] = line.substring(0, 2).toUpperCase();
+                memory[addr + 1] = line.substring(2, 4).toUpperCase();
+                addr += 2;
+            }
+        }
+        renderUI();
+    }
+
+    function stepExecution() {
+        if (halted || pc >= 255) {
+            halted = true;
+            renderUI();
+            return;
+        }
+        ir = memory[pc] + memory[pc + 1];
+        pc += 2;
+        lastModifiedReg = -1;
+
+        const op = ir[0];
+        const r = parseInt(ir[1], 16);
+        const x = parseInt(ir[2], 16);
+        const y = parseInt(ir[3], 16);
+        const xy = parseInt(ir.substring(2, 4), 16);
+
+        switch (op) {
+            case '1':
+                registers[r] = memory[xy];
+                lastModifiedReg = r;
+                break;
+            case '2':
+                registers[r] = toHex(xy);
+                lastModifiedReg = r;
+                break;
+            case '3':
+                if (xy === 0) screen += registers[r] + " ";
+                else memory[xy] = registers[r];
+                break;
+            case '4':
+                registers[y] = registers[x];
+                lastModifiedReg = y;
+                break;
+            case '5':
+                let sum = (parseInt(registers[x], 16) + parseInt(registers[y], 16)) & 0xFF;
+                registers[r] = toHex(sum);
+                lastModifiedReg = r;
+                break;
+            case 'B':
+                if (registers[r] === registers[0]) pc = xy;
+                break;
+            case 'C':
+                halted = true;
+                break;
+        }
+        renderUI();
+    }
+
+    function runAll() {
+        let safety = 0;
+        while (!halted && safety < 500) {
+            stepExecution();
+            safety++;
+        }
+    }
+
+    loadPreset('add');
+</script>
+</body>
+</html>
