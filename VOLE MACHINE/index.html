@@ -3,243 +3,476 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vole Machine Simulator - CS213</title>
+    <title>Vole Machine Simulator - Full ISA (CS213)</title>
     <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --border: #334155;
-            --text: #f8fafc;
-            --muted: #94a3b8;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #121212; color: #e0e0e0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-        header h1 { font-size: 1.5rem; color: var(--accent); }
-        header p { color: var(--muted); font-size: 0.9rem; }
-        .grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
-        .card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #e2e8f0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-        textarea { width: 100%; height: 180px; background: #0b1120; color: #38bdf8; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 1rem; resize: vertical; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-        button { padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; color: white; }
-        .btn-primary { background: var(--accent); }
-        .btn-primary:hover { background: var(--accent-hover); }
-        .btn-success { background: var(--success); }
-        .btn-warning { background: var(--warning); color: #000; }
-        .btn-danger { background: var(--danger); }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); font-size: 0.85rem; padding: 6px; }
-        .btn-outline:hover { background: var(--border); }
-        .status-bar { display: flex; gap: 20px; background: #0b1120; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px; font-family: monospace; font-size: 1rem; }
-        .status-item span { color: var(--muted); }
-        .status-item strong { color: var(--warning); }
-        .screen-box { background: #000; color: #22c55e; font-family: monospace; padding: 12px; border-radius: 6px; border: 1px solid #14532d; min-height: 45px; font-size: 1.1rem; margin-bottom: 15px; }
-        .reg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .reg-cell { background: #0b1120; border: 1px solid var(--border); padding: 8px; border-radius: 4px; display: flex; justify-content: space-between; font-family: monospace; }
-        .reg-cell.active { border-color: var(--warning); background: rgba(245, 158, 11, 0.1); }
-        .mem-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; max-height: 360px; overflow-y: auto; }
-        .mem-cell { background: #0b1120; border: 1px solid var(--border); padding: 4px 2px; text-align: center; font-family: monospace; font-size: 0.8rem; border-radius: 3px; }
-        .mem-cell .addr { display: block; font-size: 0.65rem; color: var(--muted); }
-        .mem-cell.pc-highlight { border-color: var(--accent); background: rgba(59, 130, 246, 0.25); }
+        .header { background: #1e1e1e; border: 1px solid #333; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .header h1 { font-size: 1.35rem; color: #60a5fa; }
+        .header p { font-size: 0.85rem; color: #9ca3af; margin-top: 4px; }
+        .presets { display: flex; gap: 8px; flex-wrap: wrap; }
+        .layout { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+        .panel { background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .panel h2 { font-size: 1rem; color: #f3f4f6; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; }
+        textarea { width: 100%; height: 180px; background: #0d0d0d; color: #34d399; border: 1px solid #374151; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 1rem; resize: vertical; }
+        .file-box { margin-top: 10px; padding: 8px; background: #161616; border: 1px dashed #4b5563; border-radius: 6px; font-size: 0.85rem; }
+        .file-box input { margin-top: 6px; width: 100%; color: #9ca3af; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+        button { padding: 9px 12px; border: none; border-radius: 5px; font-weight: 600; cursor: pointer; font-size: 0.88rem; }
+        button:hover { opacity: 0.9; }
+        .btn-blue { background: #2563eb; color: #fff; }
+        .btn-amber { background: #d97706; color: #fff; }
+        .btn-green { background: #059669; color: #fff; }
+        .btn-red { background: #dc2626; color: #fff; }
+        .btn-purple { background: #7c3aed; color: #fff; }
+        .btn-gray { background: #374151; color: #e5e7eb; }
+        .cpu-bar { display: flex; gap: 20px; background: #0d0d0d; border: 1px solid #333; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 1rem; margin-bottom: 12px; flex-wrap: wrap; }
+        .cpu-bar span { color: #9ca3af; }
+        .cpu-bar strong { color: #fbbf24; }
+        .screen { background: #000; border: 1px solid #166534; color: #4ade80; font-family: monospace; padding: 12px; border-radius: 6px; min-height: 44px; font-size: 1.1rem; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .reg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+        .reg-item { background: #0d0d0d; border: 1px solid #333; padding: 8px 10px; border-radius: 5px; display: flex; justify-content: space-between; font-family: monospace; font-size: 0.92rem; }
+        .reg-item.changed { border-color: #fbbf24; background: #292111; }
+        .mem-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; }
+        .mem-header h2 { border: none; padding: 0; margin: 0; }
+        .mem-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; max-height: 320px; overflow-y: auto; }
+        .mem-item { background: #0d0d0d; border: 1px solid #2d2d2d; padding: 4px 2px; text-align: center; font-family: monospace; font-size: 0.78rem; border-radius: 3px; }
+        .mem-item small { display: block; font-size: 0.65rem; color: #6b7280; }
+        .mem-item.active-pc { border-color: #3b82f6; background: #172554; }
+        .mem-item.modified-mem { border-color: #10b981; background: #064e3b; }
+        .msg { font-size: 0.85rem; color: #34d399; margin-top: 8px; min-height: 18px; }
+        .op-list { font-size: 0.82rem; color: #9ca3af; line-height: 1.65; }
+        .op-list strong { color: #e5e7eb; }
     </style>
 </head>
 <body>
 <div class="container">
-    <header>
+    <div class="header">
         <div>
-            <h1>Vole Machine Architecture Simulator</h1>
-            <p>CS213 - Object-Oriented Programming | Student: Mohamed Sayed (20250565)</p>
+            <h1>Vole Machine Full Simulator (Complete 12 Op-Codes)</h1>
+            <p>CS213 OOP Assignment 2 | Mohamed Sayed (20250565)</p>
         </div>
-        <div style="display:flex; gap:8px;">
-            <button class="btn-outline" onclick="loadPreset('add')">Load Add Example (5+3)</button>
-            <button class="btn-outline" onclick="loadPreset('mul')">Load Multiply Example (4x3)</button>
+        <div class="presets">
+            <button class="btn-gray" onclick="loadExample('add')">Ex 1: Add (5+3)</button>
+            <button class="btn-gray" onclick="loadExample('mul')">Ex 2: Multiply (4x3)</button>
+            <button class="btn-gray" onclick="loadExample('logic')">Ex 3: Logic & Rotate</button>
         </div>
-    </header>
+    </div>
 
-    <div class="grid">
+    <div class="layout">
         <div>
-            <div class="card">
-                <h2>Program Instructions (Hex)</h2>
-                <textarea id="codeInput" placeholder="Enter 4-digit hex instructions..."></textarea>
-                <div class="btn-group">
-                    <button class="btn-primary" onclick="loadProgram()">Load to Memory</button>
-                    <button class="btn-danger" onclick="resetMachine()">Reset All</button>
-                    <button class="btn-warning" onclick="stepExecution()">Step (Fetch/Exec)</button>
-                    <button class="btn-success" onclick="runAll()">Run Complete</button>
+            <div class="panel">
+                <h2>1. Program Input (Any Vole Code)</h2>
+                <textarea id="progInput" placeholder="Paste ANY 4-digit hex Vole program here..."></textarea>
+                <div class="file-box">
+                    <label>Or Load from .txt File:</label>
+                    <input type="file" id="fileInput" accept=".txt" onchange="loadFromFile(event)">
+                </div>
+                <div class="btn-grid">
+                    <button class="btn-blue" onclick="vm.loadConsole()">Load Program</button>
+                    <button class="btn-red" onclick="vm.resetAll()">Reset All</button>
+                    <button class="btn-amber" onclick="vm.runStep()">Run One Step</button>
+                    <button class="btn-green" onclick="vm.runAll()">Run All (Instant)</button>
+                </div>
+                <button class="btn-purple" style="width: 100%; margin-top: 8px;" onclick="vm.toggleAutoRun()" id="autoBtn">Auto-Run (Animated)</button>
+                <div class="msg" id="statusMsg"></div>
+            </div>
+
+            <div class="panel">
+                <h2>Full Vole Instruction Set (1 - C)</h2>
+                <div class="op-list">
+                    <div><strong>1RXY:</strong> Load Reg R from Mem XY</div>
+                    <div><strong>2RXY:</strong> Load Reg R with value XY</div>
+                    <div><strong>3RXY:</strong> Store Reg R to Mem XY (00 = Screen)</div>
+                    <div><strong>40RS:</strong> Move Reg R to Reg S</div>
+                    <div><strong>5RST:</strong> Add Two's Complement (S + T → R)</div>
+                    <div><strong>6RST:</strong> Add Floating-Point (S + T → R)</div>
+                    <div><strong>7RST:</strong> Bitwise OR (S | T → R)</div>
+                    <div><strong>8RST:</strong> Bitwise AND (S & T → R)</div>
+                    <div><strong>9RST:</strong> Bitwise XOR (S ^ T → R)</div>
+                    <div><strong>AR0X:</strong> Rotate Reg R right X bits</div>
+                    <div><strong>BRXY:</strong> Jump to XY if Reg R == Reg 0</div>
+                    <div><strong>C000:</strong> Halt execution</div>
                 </div>
             </div>
-            <div class="card">
-                <h2>Quick Op-Code Reference</h2>
-                <ul style="font-size: 0.85rem; color: var(--muted); line-height: 1.6; padding-left: 16px;">
-                    <li><strong>1RXY:</strong> Load Reg R from Mem XY</li>
-                    <li><strong>2RXY:</strong> Load Reg R with value XY</li>
-                    <li><strong>3RXY:</strong> Store Reg R to Mem XY (00=Screen)</li>
-                    <li><strong>40RS:</strong> Move Reg R to Reg S</li>
-                    <li><strong>5RST:</strong> Add Reg S + Reg T into Reg R</li>
-                    <li><strong>BRXY:</strong> Jump to XY if Reg R == Reg 0</li>
-                    <li><strong>C000:</strong> Halt execution</li>
-                </ul>
-            </div>
         </div>
 
         <div>
-            <div class="card">
-                <h2>CPU State & Screen Output</h2>
-                <div class="status-bar">
-                    <div class="status-item"><span>PC:</span> <strong id="pcVal">00</strong></div>
-                    <div class="status-item"><span>IR:</span> <strong id="irVal">0000</strong></div>
-                    <div class="status-item"><span>Status:</span> <strong id="statusVal">READY</strong></div>
+            <div class="panel">
+                <h2>2. CPU & Screen Status</h2>
+                <div class="cpu-bar">
+                    <div><span>PC:</span> <strong id="pcBox">00</strong></div>
+                    <div><span>IR:</span> <strong id="irBox">0000</strong></div>
+                    <div><span>Decoded:</span> <strong id="descBox" style="color:#60a5fa;">Ready</strong></div>
+                    <div><span>State:</span> <strong id="stateBox">STOPPED</strong></div>
                 </div>
-                <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 4px;">Console Screen Output (Memory 0x00):</div>
-                <div class="screen-box" id="screenOut">_</div>
+                <div style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 5px;">Screen Output (Prints when storing to 0x00):</div>
+                <div class="screen">
+                    <span id="screenHex">Hex: </span>
+                    <span id="screenDec" style="color:#9ca3af; font-size:0.95rem;">Dec: </span>
+                </div>
 
-                <h2 style="margin-top: 15px;">CPU Registers (R0 - RF)</h2>
-                <div class="reg-grid" id="regGrid"></div>
+                <h2>3. Registers (R0 - RF)</h2>
+                <div class="reg-grid" id="regBox"></div>
             </div>
 
-            <div class="card">
-                <h2>Main Memory (256 Bytes: 0x00 - 0xFF)</h2>
-                <div class="mem-grid" id="memGrid"></div>
+            <div class="panel">
+                <div class="mem-header">
+                    <h2>4. Memory Cells (0x00 - 0xFF)</h2>
+                    <button class="btn-gray" style="padding: 4px 10px; font-size: 0.8rem;" onclick="toggleMemView()" id="memToggleBtn">Show All (00 - FF)</button>
+                </div>
+                <div class="mem-grid" id="memBox"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    let memory = new Array(256).fill("00");
-    let registers = new Array(16).fill("00");
-    let pc = 0;
-    let ir = "0000";
-    let halted = false;
-    let screen = "";
-    let lastModifiedReg = -1;
-
-    function toHex(num, pad = 2) {
-        return (num & (pad === 2 ? 0xFF : 0xFFFF)).toString(16).toUpperCase().padStart(pad, '0');
-    }
-
-    function renderUI() {
-        document.getElementById('pcVal').innerText = toHex(pc);
-        document.getElementById('irVal').innerText = ir;
-        document.getElementById('statusVal').innerText = halted ? "HALTED" : "RUNNING";
-        document.getElementById('screenOut').innerText = screen || "_";
-
-        const regGrid = document.getElementById('regGrid');
-        regGrid.innerHTML = "";
-        for (let i = 0; i < 16; i++) {
-            const div = document.createElement('div');
-            div.className = 'reg-cell' + (i === lastModifiedReg ? ' active' : '');
-            div.innerHTML = `<span style="color:#94a3b8">R${i.toString(16).toUpperCase()}</span><strong>${registers[i]}</strong>`;
-            regGrid.appendChild(div);
-        }
-
-        const memGrid = document.getElementById('memGrid');
-        memGrid.innerHTML = "";
-        for (let i = 0; i < 256; i++) {
-            const div = document.createElement('div');
-            div.className = 'mem-cell' + ((i === pc || i === pc + 1) && !halted ? ' pc-highlight' : '');
-            div.innerHTML = `<span class="addr">${toHex(i)}</span>${memory[i]}`;
-            memGrid.appendChild(div);
-        }
-    }
-
-    function loadPreset(type) {
-        if (type === 'add') {
-            document.getElementById('codeInput').value = "2105\n2203\n5312\n3300\nC000";
-        } else {
-            document.getElementById('codeInput').value = "2000\n2103\n2204\n2301\n2400\nB114\n5442\n5003\nB00A\n3400\nC000";
-        }
-        loadProgram();
-    }
-
-    function resetMachine() {
-        memory.fill("00");
-        registers.fill("00");
-        pc = 0;
-        ir = "0000";
-        halted = false;
-        screen = "";
-        lastModifiedReg = -1;
-        renderUI();
-    }
-
-    function loadProgram() {
-        resetMachine();
-        const lines = document.getElementById('codeInput').value.trim().split(/\s+/);
-        let addr = 0;
-        for (let line of lines) {
-            if (/^[0-9A-Fa-f]{4}$/.test(line) && addr < 255) {
-                memory[addr] = line.substring(0, 2).toUpperCase();
-                memory[addr + 1] = line.substring(2, 4).toUpperCase();
-                addr += 2;
+    class Memory {
+        constructor() { this.mem = new Array(256).fill("00"); }
+        get(addr) { return (addr >= 0 && addr < 256) ? this.mem[addr] : "00"; }
+        set(addr, val) {
+            if (addr >= 0 && addr < 256) {
+                if (val.length === 1) val = "0" + val;
+                this.mem[addr] = val.toUpperCase();
             }
         }
-        renderUI();
+        reset() { this.mem.fill("00"); }
     }
 
-    function stepExecution() {
-        if (halted || pc >= 255) {
-            halted = true;
-            renderUI();
-            return;
+    class Register {
+        constructor() { this.reg = new Array(16).fill("00"); }
+        get(idx) { return (idx >= 0 && idx < 16) ? this.reg[idx] : "00"; }
+        set(idx, val) {
+            if (idx >= 0 && idx < 16) {
+                if (val.length === 1) val = "0" + val;
+                this.reg[idx] = val.toUpperCase();
+            }
         }
-        ir = memory[pc] + memory[pc + 1];
-        pc += 2;
-        lastModifiedReg = -1;
-
-        const op = ir[0];
-        const r = parseInt(ir[1], 16);
-        const x = parseInt(ir[2], 16);
-        const y = parseInt(ir[3], 16);
-        const xy = parseInt(ir.substring(2, 4), 16);
-
-        switch (op) {
-            case '1':
-                registers[r] = memory[xy];
-                lastModifiedReg = r;
-                break;
-            case '2':
-                registers[r] = toHex(xy);
-                lastModifiedReg = r;
-                break;
-            case '3':
-                if (xy === 0) screen += registers[r] + " ";
-                else memory[xy] = registers[r];
-                break;
-            case '4':
-                registers[y] = registers[x];
-                lastModifiedReg = y;
-                break;
-            case '5':
-                let sum = (parseInt(registers[x], 16) + parseInt(registers[y], 16)) & 0xFF;
-                registers[r] = toHex(sum);
-                lastModifiedReg = r;
-                break;
-            case 'B':
-                if (registers[r] === registers[0]) pc = xy;
-                break;
-            case 'C':
-                halted = true;
-                break;
-        }
-        renderUI();
+        reset() { this.reg.fill("00"); }
     }
 
-    function runAll() {
-        let safety = 0;
-        while (!halted && safety < 500) {
-            stepExecution();
-            safety++;
+    class ALU {
+        toDec(h) { return parseInt(h, 16) || 0; }
+        toHex(d) {
+            d = d % 256;
+            if (d < 0) d += 256;
+            let res = d.toString(16).toUpperCase();
+            return res.length === 1 ? "0" + res : res;
+        }
+        addTwos(a, b) {
+            return this.toHex(this.toDec(a) + this.toDec(b));
+        }
+        // Vole 8-bit Floating Point: 1 sign, 3 exponent (excess-4), 4 mantissa
+        decodeFloat(byteVal) {
+            const s = (byteVal >> 7) & 1;
+            const exp = (byteVal >> 4) & 7;
+            const mant = byteVal & 15;
+            if (exp === 0 && mant === 0) return 0;
+            const val = (mant / 16.0) * Math.pow(2, exp - 4);
+            return s ? -val : val;
+        }
+        encodeFloat(val) {
+            if (val === 0) return 0;
+            const s = val < 0 ? 1 : 0;
+            val = Math.abs(val);
+            let exp = 4;
+            while (val >= 1.0 && exp < 7) { val /= 2.0; exp++; }
+            while (val < 0.5 && exp > 0) { val *= 2.0; exp--; }
+            let mant = Math.round(val * 16) & 15;
+            return (s << 7) | (exp << 4) | mant;
+        }
+        addFloat(a, b) {
+            const f1 = this.decodeFloat(this.toDec(a));
+            const f2 = this.decodeFloat(this.toDec(b));
+            return this.toHex(this.encodeFloat(f1 + f2));
+        }
+        rotateRight(valHex, steps) {
+            let v = this.toDec(valHex);
+            steps = steps % 8;
+            let rotated = ((v >> steps) | (v << (8 - steps))) & 0xFF;
+            return this.toHex(rotated);
         }
     }
 
-    loadPreset('add');
+    class CPU {
+        constructor() {
+            this.pc = 0;
+            this.ir = "0000";
+            this.R = new Register();
+            this.alu = new ALU();
+            this.stop = true;
+            this.lastReg = -1;
+            this.lastMem = -1;
+            this.desc = "Ready";
+        }
+        reset() {
+            this.pc = 0;
+            this.ir = "0000";
+            this.R.reset();
+            this.stop = false;
+            this.lastReg = -1;
+            this.lastMem = -1;
+            this.desc = "Ready";
+        }
+        isStopped() { return this.stop; }
+        step(M, state) {
+            if (this.stop || this.pc >= 254) {
+                this.stop = true;
+                this.desc = "End of memory";
+                return;
+            }
+            this.ir = M.get(this.pc) + M.get(this.pc + 1);
+            if (this.ir === "0000") {
+                this.stop = true;
+                this.desc = "Null instruction (0000)";
+                return;
+            }
+            this.pc += 2;
+            this.lastReg = -1;
+            this.lastMem = -1;
+
+            const op = this.ir[0].toUpperCase();
+            const r = this.alu.toDec(this.ir[1]);
+            const x = this.alu.toDec(this.ir[2]);
+            const y = this.alu.toDec(this.ir[3]);
+            const xy = this.alu.toDec(this.ir.substring(2, 4));
+            const rHex = this.ir[1].toUpperCase();
+            const xHex = this.ir[2].toUpperCase();
+            const yHex = this.ir[3].toUpperCase();
+            const xyHex = this.ir.substring(2, 4).toUpperCase();
+
+            switch (op) {
+                case '1':
+                    this.R.set(r, M.get(xy));
+                    this.lastReg = r;
+                    this.desc = `Load R${rHex} ← Mem[${xyHex}]`;
+                    break;
+                case '2':
+                    this.R.set(r, xyHex);
+                    this.lastReg = r;
+                    this.desc = `Load R${rHex} ← #${xyHex}`;
+                    break;
+                case '3':
+                    if (xy === 0) {
+                        const val = this.R.get(r);
+                        state.screenHex.push(val);
+                        state.screenDec.push(this.alu.toDec(val));
+                        this.desc = `Print R${rHex} (${val}) to Screen`;
+                    } else {
+                        M.set(xy, this.R.get(r));
+                        this.lastMem = xy;
+                        this.desc = `Store R${rHex} → Mem[${xyHex}]`;
+                    }
+                    break;
+                case '4':
+                    this.R.set(y, this.R.get(x));
+                    this.lastReg = y;
+                    this.desc = `Move R${xHex} → R${yHex}`;
+                    break;
+                case '5':
+                    this.R.set(r, this.alu.addTwos(this.R.get(x), this.R.get(y)));
+                    this.lastReg = r;
+                    this.desc = `Add (Int) R${xHex}+R${yHex} → R${rHex}`;
+                    break;
+                case '6':
+                    this.R.set(r, this.alu.addFloat(this.R.get(x), this.R.get(y)));
+                    this.lastReg = r;
+                    this.desc = `Add (Float) R${xHex}+R${yHex} → R${rHex}`;
+                    break;
+                case '7':
+                    this.R.set(r, this.alu.toHex(this.alu.toDec(this.R.get(x)) | this.alu.toDec(this.R.get(y))));
+                    this.lastReg = r;
+                    this.desc = `OR R${xHex}|R${yHex} → R${rHex}`;
+                    break;
+                case '8':
+                    this.R.set(r, this.alu.toHex(this.alu.toDec(this.R.get(x)) & this.alu.toDec(this.R.get(y))));
+                    this.lastReg = r;
+                    this.desc = `AND R${xHex}&R${yHex} → R${rHex}`;
+                    break;
+                case '9':
+                    this.R.set(r, this.alu.toHex(this.alu.toDec(this.R.get(x)) ^ this.alu.toDec(this.R.get(y))));
+                    this.lastReg = r;
+                    this.desc = `XOR R${xHex}^R${yHex} → R${rHex}`;
+                    break;
+                case 'A':
+                    this.R.set(r, this.alu.rotateRight(this.R.get(r), y));
+                    this.lastReg = r;
+                    this.desc = `Rotate R${rHex} right by ${y}`;
+                    break;
+                case 'B':
+                    if (this.R.get(r) === this.R.get(0)) {
+                        this.pc = xy;
+                        this.desc = `Jump to ${xyHex} (R${rHex} == R0)`;
+                    } else {
+                        this.desc = `No Jump (R${rHex} != R0)`;
+                    }
+                    break;
+                case 'C':
+                    this.stop = true;
+                    this.desc = `HALT (C000)`;
+                    break;
+                default:
+                    this.desc = `Unknown OpCode (${op})`;
+                    break;
+            }
+        }
+    }
+
+    class Machine {
+        constructor() {
+            this.cpu = new CPU();
+            this.mem = new Memory();
+            this.state = { screenHex: [], screenDec: [] };
+            this.showAllMem = false;
+            this.autoTimer = null;
+        }
+        stopAuto() {
+            if (this.autoTimer) {
+                clearInterval(this.autoTimer);
+                this.autoTimer = null;
+                document.getElementById('autoBtn').innerText = "Auto-Run (Animated)";
+            }
+        }
+        toggleAutoRun() {
+            if (this.autoTimer) {
+                this.stopAuto();
+                return;
+            }
+            if (this.cpu.isStopped()) return;
+            document.getElementById('autoBtn').innerText = "Pause Auto-Run";
+            this.autoTimer = setInterval(() => {
+                if (this.cpu.isStopped()) {
+                    this.stopAuto();
+                    setMsg("Execution finished.");
+                } else {
+                    this.runStep();
+                }
+            }, 400);
+        }
+        resetAll() {
+            this.stopAuto();
+            this.cpu.reset();
+            this.cpu.stop = true;
+            this.mem.reset();
+            this.state.screenHex = [];
+            this.state.screenDec = [];
+            setMsg("Machine reset.");
+            this.display();
+        }
+        loadText(text, source) {
+            this.stopAuto();
+            this.cpu.reset();
+            this.mem.reset();
+            this.state.screenHex = [];
+            this.state.screenDec = [];
+
+            // Clean comments (if someone pastes code with // or # comments) and extract valid 4-hex tokens
+            const lines = text.split(/\r?\n/);
+            let addr = 0;
+            for (let rawLine of lines) {
+                let clean = rawLine.split('//')[0].split('#')[0].trim();
+                let tokens = clean.split(/\s+/);
+                for (let tok of tokens) {
+                    tok = tok.toUpperCase();
+                    if (tok === "END") { addr = 256; break; }
+                    if (/^[0-9A-F]{4}$/.test(tok) && addr < 254) {
+                        this.mem.set(addr, tok.substring(0, 2));
+                        this.mem.set(addr + 1, tok.substring(2, 4));
+                        addr += 2;
+                    }
+                }
+            }
+            setMsg("Loaded " + (addr / 2) + " instructions from " + source + ".");
+            this.display();
+        }
+        loadConsole() {
+            this.loadText(document.getElementById('progInput').value, "editor");
+        }
+        runStep() {
+            this.cpu.step(this.mem, this.state);
+            this.display();
+        }
+        runAll() {
+            this.stopAuto();
+            let limit = 0;
+            while (!this.cpu.isStopped() && limit < 2000) {
+                this.cpu.step(this.mem, this.state);
+                limit++;
+            }
+            setMsg(limit >= 2000 ? "Stopped: Infinite loop protection (2000 steps)!" : "Execution finished.");
+            this.display();
+        }
+        display() {
+            document.getElementById('pcBox').innerText = this.cpu.alu.toHex(this.cpu.pc);
+            document.getElementById('irBox').innerText = this.cpu.ir;
+            document.getElementById('descBox').innerText = this.cpu.desc;
+            document.getElementById('stateBox').innerText = this.cpu.isStopped() ? "STOPPED" : "RUNNING";
+
+            const hexStr = this.state.screenHex.join(" ");
+            const decStr = this.state.screenDec.join(" ");
+            document.getElementById('screenHex').innerText = "Hex: " + (hexStr || "—");
+            document.getElementById('screenDec').innerText = "Dec: " + (decStr || "—");
+
+            const regBox = document.getElementById('regBox');
+            regBox.innerHTML = "";
+            for (let i = 0; i < 16; i++) {
+                const div = document.createElement('div');
+                div.className = "reg-item" + (i === this.cpu.lastReg ? " changed" : "");
+                div.innerHTML = `<span>R${i.toString(16).toUpperCase()}</span><strong>${this.cpu.R.get(i)}</strong>`;
+                regBox.appendChild(div);
+            }
+
+            const memBox = document.getElementById('memBox');
+            memBox.innerHTML = "";
+            const count = this.showAllMem ? 256 : 32;
+            for (let i = 0; i < count; i++) {
+                const div = document.createElement('div');
+                const isPc = (!this.cpu.isStopped() && (i === this.cpu.pc || i === this.cpu.pc + 1));
+                const isMod = (i === this.cpu.lastMem);
+                div.className = "mem-item" + (isPc ? " active-pc" : "") + (isMod ? " modified-mem" : "");
+                div.innerHTML = `<small>${this.cpu.alu.toHex(i)}</small>${this.mem.get(i)}`;
+                memBox.appendChild(div);
+            }
+        }
+    }
+
+    const vm = new Machine();
+
+    function setMsg(text) { document.getElementById('statusMsg').innerText = text; }
+
+    function loadFromFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('progInput').value = e.target.result;
+            vm.loadText(e.target.result, file.name);
+        };
+        reader.readAsText(file);
+    }
+
+    function toggleMemView() {
+        vm.showAllMem = !vm.showAllMem;
+        document.getElementById('memToggleBtn').innerText = vm.showAllMem ? "Show First 32 (00 - 1F)" : "Show All (00 - FF)";
+        vm.display();
+    }
+
+    function loadExample(type) {
+        if (type === 'add') {
+            document.getElementById('progInput').value = "2105\n2203\n5312\n3300\nC000";
+        } else if (type === 'mul') {
+            // Fixed jump address: 3400 is at byte 0x12 (18 in decimal)
+            document.getElementById('progInput').value = "2000\n2103\n2204\n2301\n2400\nB112\n5442\n5003\nB00A\n3400\nC000";
+        } else {
+            document.getElementById('progInput').value = "210F\n22F0\n7312\n8412\n9512\nA302\n3300\n3400\nC000";
+        }
+        vm.loadConsole();
+    }
+
+    loadExample('add');
 </script>
 </body>
 </html>
